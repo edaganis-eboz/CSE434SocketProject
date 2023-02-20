@@ -3,10 +3,7 @@ import threading
 import queue
 import random
 
-#TODO make new chohort send the correct thing to name, i.e. change message
-#TODO make del chohort message the other dudes telling them theyve been kicked from the cohort 
-
-
+ 
 class Bank(object):
 	def __init__(self):
 		self.in_queue = queue.Queue() #queue of incoming commands
@@ -61,7 +58,7 @@ class Bank(object):
 				self.sock.sendto(data, addr)
 		pass
 
-	def syntax_check(self, data): #this will check the syntax of the command
+	def syntax_check(self, data): #this will check the syntax of the command (not needed for milestone :P)
 		#command = data.decode('ascii').split(' ')
 		#print(command)
 		return True
@@ -79,7 +76,7 @@ class Bank(object):
 		starting_customer_name = cmd_list[1]
 		cohort_size = cmd_list[2]
 		if int(cohort_size) >= len(self.customer_list): #this should be > cohortless
-			new_id = random.randint(0,9999) #cohorts can habe id collisons
+			new_id = random.randint(0,9999) #cohorts can have id collisons
 			self.cohort_list.append(new_id)
 			for customer in self.customer_list:
 				if customer.name == starting_customer_name:
@@ -89,14 +86,25 @@ class Bank(object):
 			no_cohort = []
 			for i in range(len(self.customer_list)):
 				if self.customer_list[i].cohort_id == -1:
-					no_cohort.append[i] #get a list of the idnex of cohortless customers
+					no_cohort.append[i] #get a list of the index of cohortless customers
 	
 			while added < int(cohort_size) -1:
 				index = random.randint(0, len(no_cohort))
 				self.customer_list[no_cohort[index]].id = new_id
 				added += 1
 				del new_cohort[index]
-			self.debug_print_cohort()
+			self.debug_print_cohort() #the new cohort is created at this point, now to just send to confirmation to the starter
+			#time to create the return message
+			for customer in self.customer_list:
+				if customer.name == starting_customer_name:
+					return_addr = (customer.ip_address, customer.portb)
+					break
+			msg = f"members in new cohort: {new_id}".encode('ascii')
+			self.out_queue.put((msg, return_addr))
+			for customer in self.customer_list:
+				if customer.cohort_id == new_id:
+					msg = customer.get_info().encode('ascii')
+					self.out_queue.put((msg, return_addr))
 			return "SUCESSS"
 		else:
 			return "FAILURE"
@@ -114,9 +122,9 @@ class Bank(object):
 			if customer.cohort_id == cohort_id:
 				customer.cohort_id = -1
 				msg = f"you have been removed from your cohort by: {customer_name}".encode('ascii')
-				addr = customer.ip, customer.portb
-				self.out_queue.put((msg, addr)) #send a message to all customers in a cohort that theyve been kicked
-		return "SUCESSS"
+				return_addr = (customer.ip_address, customer.portb)
+				self.out_queue.put((msg, return_addr)) #send a message to all customers in a cohort that theyve been kicked
+		return "SUCESSS" 
 
 
 	def exit_cmd(self, cmd_list):
@@ -135,16 +143,17 @@ class Bank(object):
 			print(customer.get_info())
 
 
-	def debug_print_cohort(self):
-		for cohort in cohort_list:
+	def debug_print_cohort(self): #debug function
+		for cohort in self.cohort_list:
 			print(f"cohort: {cohort}")
-			for customer in customer_list:
+			for customer in self.customer_list:
 				if customer.cohort_id == cohort:
 					print(customer.get_info())
 
 
+
 class Customer(object):
-	def __init__(self, name, ip_address, balance, portb, portp):
+	def __init__(self, name, balance, ip_address, portb, portp):
 		self.name = name
 		self.balance = balance
 		self.ip_address = ip_address		
@@ -153,9 +162,10 @@ class Customer(object):
 		self.cohort_id = -1
 
 	def get_info(self):
-		return (self.name, self.balance, self.ip_address, self.portb, self.portp)
+		ret_str = str(self.name) + ' ' + str(self.balance) + ' ' + str(self.ip_address) + ' ' + str(self.portb) + ' ' + str(self.portp)
+		return ret_str
 
-class Cohort(object):  #deprecated
+class Cohort(object):  #deprecated for now
 	customers = []
 	def __init__(self, id):
 		self.id = id
