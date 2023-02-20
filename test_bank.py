@@ -75,8 +75,8 @@ class Bank(object):
 		print('new_cohort cmd', cmd_list)
 		starting_customer_name = cmd_list[1]
 		cohort_size = cmd_list[2]
-		if int(cohort_size) >= len(self.customer_list): #this should be > cohortless
-			new_id = random.randint(0,9999) #cohorts can have id collisons
+		if int(cohort_size) <= len(self.customer_list): #this should be > cohortless
+			new_id = random.randint(0,9999) #cohorts can have id collisons, this can be easily fixed
 			self.cohort_list.append(new_id)
 			for customer in self.customer_list:
 				if customer.name == starting_customer_name:
@@ -84,15 +84,15 @@ class Bank(object):
 					customer.cohort_id = new_id
 			added = 0
 			no_cohort = []
-			for i in range(len(self.customer_list)):
+			for i in range(len(self.customer_list)): #iterate through every customer
 				if self.customer_list[i].cohort_id == -1:
-					no_cohort.append[i] #get a list of the index of cohortless customers
+					no_cohort.append(i) #get a list of the index of cohortless customers
 	
 			while added < int(cohort_size) -1:
-				index = random.randint(0, len(no_cohort))
-				self.customer_list[no_cohort[index]].id = new_id
+				index = random.randint(0, len(no_cohort)-1)
+				self.customer_list[no_cohort[index]].cohort_id = new_id
 				added += 1
-				del new_cohort[index]
+				del no_cohort[index]
 			self.debug_print_cohort() #the new cohort is created at this point, now to just send to confirmation to the starter
 			#time to create the return message
 			for customer in self.customer_list:
@@ -124,6 +124,7 @@ class Bank(object):
 				msg = f"you have been removed from your cohort by: {customer_name}".encode('ascii')
 				return_addr = (customer.ip_address, customer.portb)
 				self.out_queue.put((msg, return_addr)) #send a message to all customers in a cohort that theyve been kicked
+		self.cohort_list.remove(cohort_id)
 		return "SUCESSS" 
 
 
